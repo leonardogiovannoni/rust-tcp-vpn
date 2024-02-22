@@ -121,7 +121,7 @@ const DEV_FILE: &str = "/dev/net/tun";
 // inizialize virtual interface but do not bring it up
 pub fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> std::fs::File {
     // open virtual device
-    let mut iffile = match std::fs::File::options()
+    let iffile = match std::fs::File::options()
         .read(true)
         .write(true)
         .open(DEV_FILE) {
