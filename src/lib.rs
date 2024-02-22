@@ -8,6 +8,9 @@ pub mod tunif;
 use std::net::{IpAddr, TcpListener, TcpStream};
 use std::process;
 
+// How to use multiple module:
+//  https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html
+
 
 const IFNAME: &str = "tun0";
 
