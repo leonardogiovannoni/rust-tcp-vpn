@@ -10,28 +10,31 @@ use std::process;
 
 const DEFAULT_IFNAME: &str = "tun0";
 
+// properties of virtual interface
+pub struct Interface {
+    pub ifname: String,
+    pub ifaddr: IpAddr,
+    pub netmask: u8,
+}
 
-// Program can execute both as client or server
-pub enum Args{
+pub enum Mode {
     // when connecting to remote need both ip and port
     Client {
-        // properties of virtual interface
-        ifname: String,
-        ifaddr: IpAddr,
-        netmask: u8,
         // TCP related data
         remote:std::net::SocketAddr
     },
     // when acting as server require address and port to
     // bind to for incoming connections
     Server {
-        // properties of virtual interface
-        ifname: String,
-        ifaddr: IpAddr,
-        netmask: u8,
         // TCP related data
         local:std::net::SocketAddr
     }
+}
+
+// Program can execute both as client or server
+pub struct Args{
+    pub interface: Interface,
+    pub mode: Mode,
 }
 
 // clap seems better than argparse
@@ -83,9 +86,16 @@ pub fn parse_arg() -> Args {
     };
     // IP address to be used in network connection
     let addr = SocketAddr::new(host, args.port);
-    if args.server {
-        Args::Server { ifname: args.ifname, ifaddr, netmask: args.netmask, local: addr }
-    } else {
-        Args::Client { ifname: args.ifname, ifaddr, netmask: args.netmask, remote: addr }
+    Args {
+        interface: Interface {
+            ifname: args.ifname,
+            ifaddr,
+            netmask: args.netmask
+        },
+        mode: if args.server {
+            Mode::Server { local: addr }
+        } else {
+            Mode::Client { remote: addr }
+        }
     }
 }

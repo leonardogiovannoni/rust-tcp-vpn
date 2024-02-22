@@ -56,10 +56,13 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
 }
 
 pub fn run(args: parsing::Args) {
+    let ifname = args.interface.ifname;
+    let ifaddr = args.interface.ifaddr;
+    let netmask = args.interface.netmask;
     // different behaviour in case of client or server
-    match args {
-        parsing::Args::Client { ifname, ifaddr, netmask, remote } => execute_client(ifname, ifaddr, netmask, remote),
-        parsing::Args::Server { ifname, ifaddr, netmask, local } => execute_server(ifname, ifaddr, netmask, local),
+    match args.mode {
+        parsing::Mode::Client { remote } => execute_client(ifname, ifaddr, netmask, remote),
+        parsing::Mode::Server { local } => execute_server(ifname, ifaddr, netmask, local),
     }
 }
 
