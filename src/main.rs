@@ -23,118 +23,124 @@ const IFNAME: &str = "tun0";
 const MAGIC: u32 = 0x12345678;
 
 mod tunif {
-    extern "C" {
-        pub fn set_interface_name(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
-        pub fn set_interface_address(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char,
-            addr: *const cty::c_char,
-            netmask: cty::c_int
-        ) -> ();
-        pub fn set_interface_up(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
-        pub fn set_interface_down(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
+    pub mod wrapper {
+        extern "C" {
+            pub fn set_interface_name(
+                if_fd: cty::c_int,
+                ifname: *const cty::c_char
+            ) -> ();
+            pub fn set_interface_address(
+                if_fd: cty::c_int,
+                ifname: *const cty::c_char,
+                addr: *const cty::c_char,
+                netmask: cty::c_int
+            ) -> ();
+            pub fn set_interface_up(
+                if_fd: cty::c_int,
+                ifname: *const cty::c_char
+            ) -> ();
+            pub fn set_interface_down(
+                if_fd: cty::c_int,
+                ifname: *const cty::c_char
+            ) -> ();
+        }
+    }
+
+    use std::os::fd::AsRawFd;
+    use std::net::IpAddr;
+
+    pub fn set_interface_name(
+        iffile: &std::fs::File,
+        ifname: &str
+    ) -> () {
+        let if_fd = iffile.as_raw_fd();
+        let if_fd = if_fd as cty::c_int;
+        let ifname = match std::ffi::CString::new(ifname) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error creating cstring: {}", e);
+                std::process::exit(1)
+            }
+        };
+        unsafe {
+            wrapper::set_interface_name(if_fd, ifname.as_ptr());
+        }
+    }
+
+    pub fn set_interface_address(
+        iffile: &std::fs::File,
+        ifname: &str,
+        addr: &IpAddr,
+        netmask: i32
+    ) -> () {
+        let if_fd = iffile.as_raw_fd();
+        let if_fd = if_fd as cty::c_int;
+        let ifname = match std::ffi::CString::new(ifname) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error creating cstring: {}", e);
+                std::process::exit(1)
+            }
+        };
+        let addr = match addr {
+            IpAddr::V4(_) => {
+                addr.to_string()
+            },
+            IpAddr::V6(_) => {
+                eprintln!("IPv6 is currently unsupported for virtual interface");
+                std::process::exit(1)
+            }
+        };
+        let addr = match std::ffi::CString::new(addr) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error creating cstring: {}", e);
+                std::process::exit(1)
+            }
+        };
+        let netmask = netmask as cty::c_int;
+        unsafe {
+            wrapper::set_interface_address(if_fd, ifname.as_ptr(), addr.as_ptr(), netmask);
+        }
+    }
+
+    pub fn set_interface_up(
+        iffile: &std::fs::File,
+        ifname: &str
+    ) -> () {
+        let if_fd = iffile.as_raw_fd();
+        let if_fd = if_fd as cty::c_int;
+        let ifname = match std::ffi::CString::new(ifname) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error creating cstring: {}", e);
+                std::process::exit(1)
+            }
+        };
+        unsafe {
+            wrapper::set_interface_up(if_fd, ifname.as_ptr());
+        }
+    }
+
+    pub fn set_interface_down(
+        iffile: &std::fs::File,
+        ifname: &str
+    ) -> () {
+        let if_fd = iffile.as_raw_fd();
+        let if_fd = if_fd as cty::c_int;
+        let ifname = match std::ffi::CString::new(ifname) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("Error creating cstring: {}", e);
+                std::process::exit(1)
+            }
+        };
+        unsafe {
+            wrapper::set_interface_down(if_fd, ifname.as_ptr());
+        }
     }
 }
 
-fn set_interface_name(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    unsafe {
-        tunif::set_interface_name(if_fd, ifname.as_ptr());
-    }
-}
-
-fn set_interface_address(
-    iffile: &std::fs::File,
-    ifname: &str,
-    addr: &IpAddr,
-    netmask: i32
-) -> () {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    let addr = match addr {
-        IpAddr::V4(_) => {
-            addr.to_string()
-        },
-        IpAddr::V6(_) => {
-            eprintln!("IPv6 is currently unsupported for virtual interface");
-            std::process::exit(1)
-        }
-    };
-    let addr = match std::ffi::CString::new(addr) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    let netmask = netmask as cty::c_int;
-    unsafe {
-        tunif::set_interface_address(if_fd, ifname.as_ptr(), addr.as_ptr(), netmask);
-    }
-}
-
-fn set_interface_up(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    unsafe {
-        tunif::set_interface_up(if_fd, ifname.as_ptr());
-    }
-}
-
-fn set_interface_down(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    unsafe {
-        tunif::set_interface_down(if_fd, ifname.as_ptr());
-    }
-}
 
 
 
@@ -235,9 +241,9 @@ fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> std::f
         }
     };
     // set interface name
-    set_interface_name(&iffile, &ifname);
+    tunif::set_interface_name(&iffile, &ifname);
     // set interface ip
-    set_interface_address(&iffile, &ifname, &ifaddr, netmask as i32);
+    tunif::set_interface_address(&iffile, &ifname, &ifaddr, netmask as i32);
     // return file handler
     iffile
 }
@@ -425,7 +431,7 @@ fn handle_local2remote(iffile: std::fs::File, stream: TcpStream) -> thread::Join
                     },
                     Err(err) => {
                         eprintln!("Error creating cstring: {}", err);
-                        std::process::exit(1)            
+                        std::process::exit(1)
                     }
                 };
                 // build packet
@@ -504,7 +510,7 @@ fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::net::
             std::process::exit(1)
         }
         // bring interface up
-        set_interface_up(&iffile, &ifname);
+        tunif::set_interface_up(&iffile, &ifname);
         handle_flow(&mut stream, &mut iffile);
         eprintln!("End of server work!");
         std::process::exit(1)
@@ -531,7 +537,7 @@ fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::net:
         std::process::exit(1)
     }
     // bring interface up
-    set_interface_up(&iffile, &ifname);
+    tunif::set_interface_up(&iffile, &ifname);
     handle_flow(&mut stream, &mut iffile);
 }
 
@@ -546,8 +552,6 @@ fn run(args: Args) {
 fn main() -> std::io::Result<()> {
     let args = parse_arg();
     run(args);
-
-    //set_interface_up(&iffile, IFNAME);
 
     Ok(())
 }
