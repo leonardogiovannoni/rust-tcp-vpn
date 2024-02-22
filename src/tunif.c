@@ -43,7 +43,7 @@ void set_interface_address(int if_fd, const char *ifname, const char *addr, int 
 
     struct in_addr ipv4;
     const struct in_addr nmask = {
-        htonl(((1<<32)-1) ^ ((1<<(32-netmask))-1))
+        htonl((-1) ^ ((1<<(32-netmask))-1))
     };
     struct sockaddr_in ipv4_addr;
 
