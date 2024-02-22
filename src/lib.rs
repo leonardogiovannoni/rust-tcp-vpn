@@ -12,9 +12,6 @@ use std::process;
 //  https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html
 
 
-const IFNAME: &str = "tun0";
-
-
 pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::net::SocketAddr) {
     let mut iffile = tunif::initialize_tun_interface(&ifname, ifaddr, netmask);
     // wait for remote connection
