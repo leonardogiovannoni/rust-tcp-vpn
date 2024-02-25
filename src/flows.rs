@@ -150,7 +150,6 @@ pub fn handle_flow(
         }
         let [pipe_fd, tcp_fd, if_fd] = fds;
         if pipe_fd.any().unwrap() {
-            eprintln!("CTRL+C");
             // consume pending signal data
             crate::signals::consume_sigpipe(sigfile);
             // send exit packet
