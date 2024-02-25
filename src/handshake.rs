@@ -31,7 +31,7 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
     // classic netmask
     let netmask: u32 = (!0) ^ ((1 << (32 - netmask)) - 1);
     // local addr
-    let local_addr: u32 = u32::from_ne_bytes(ifaddr.octets());
+    let local_addr: u32 = u32::from_be_bytes(ifaddr.octets());
     // 2. parse first packet
     {
         let mut packet1: [u8; 16] = [0; 16];
@@ -39,7 +39,7 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
         istream.read_exact(&mut packet1).unwrap();
         // check magic
         // https://doc.rust-lang.org/std/primitive.slice.html#method.split_at
-        let found_magick = u32::from_ne_bytes(packet1[..4].try_into().unwrap());
+        let found_magick = u32::from_be_bytes(packet1[..4].try_into().unwrap());
         if MAGIC != found_magick {
             eprintln!(
                 "HANDSHAKE error, magic: {} instead of {}",
@@ -48,14 +48,14 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
             return false;
         }
         // check packet id: should be 1
-        let pktid = u32::from_ne_bytes(packet1[4..8].try_into().unwrap());
+        let pktid = u32::from_be_bytes(packet1[4..8].try_into().unwrap());
         if 1 != pktid {
             eprintln!("HANDSHAKE error, pktid: {} instead of {}", pktid, 1);
             return false;
         }
         // get remote address and netmask
-        let remote_addr = u32::from_ne_bytes(packet1[8..12].try_into().unwrap());
-        let remote_netmask = u32::from_ne_bytes(packet1[12..16].try_into().unwrap());
+        let remote_addr = u32::from_be_bytes(packet1[8..12].try_into().unwrap());
+        let remote_netmask = u32::from_be_bytes(packet1[12..16].try_into().unwrap());
         // check netmask
         if netmask != remote_netmask {
             eprintln!(
@@ -76,9 +76,9 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
     // 3. send server ifaddr
     {
         // packet id: 2
-        ostream.write(&(2 as u32).to_ne_bytes()).unwrap();
+        ostream.write(&(2 as u32).to_be_bytes()).unwrap();
         // server interface address
-        ostream.write(&local_addr.to_ne_bytes()).unwrap();
+        ostream.write(&local_addr.to_be_bytes()).unwrap();
         // send packet
         ostream.flush().unwrap();
     }
@@ -87,12 +87,12 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
         let mut packet3: [u8; 8] = [0; 8];
         // read packet
         istream.read_exact(&mut packet3).unwrap();
-        let pktid = u32::from_ne_bytes(packet3[..4].try_into().unwrap());
+        let pktid = u32::from_be_bytes(packet3[..4].try_into().unwrap());
         if 3 != pktid {
             eprintln!("HANDSHAKE error, pktid: {} instead of {}", pktid, 3);
             return false;
         }
-        let status = u32::from_ne_bytes(packet3[4..8].try_into().unwrap());
+        let status = u32::from_be_bytes(packet3[4..8].try_into().unwrap());
         if status != 0 {
             eprintln!(
                 "HANDSHAKE error, client status: {} instead of {}",
@@ -125,18 +125,18 @@ pub fn handler_client_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
     // classic netmask
     let netmask: u32 = (!0) ^ ((1 << (32 - netmask)) - 1);
     // local addr
-    let local_addr: u32 = u32::from_ne_bytes(ifaddr.octets());
+    let local_addr: u32 = u32::from_be_bytes(ifaddr.octets());
     // 1. send intial packet: 16 bytes
     {
         // insert magic
-        ostream.write(&MAGIC.to_ne_bytes()).unwrap();
+        ostream.write(&MAGIC.to_be_bytes()).unwrap();
         // packet id: 1
-        ostream.write(&(1 as u32).to_ne_bytes()).unwrap();
+        ostream.write(&(1 as u32).to_be_bytes()).unwrap();
         // IPv4 address - already in network byte order
         // https://doc.rust-lang.org/std/net/struct.Ipv4Addr.html#method.octets
-        ostream.write(&local_addr.to_ne_bytes()).unwrap();
+        ostream.write(&local_addr.to_be_bytes()).unwrap();
         // netmask
-        ostream.write(&netmask.to_ne_bytes()).unwrap();
+        ostream.write(&netmask.to_be_bytes()).unwrap();
         // send packet
         ostream.flush().unwrap();
     }
@@ -146,13 +146,13 @@ pub fn handler_client_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
         // read packet
         istream.read_exact(&mut packet2).unwrap();
         // check idx
-        let pktid = u32::from_ne_bytes(packet2[..4].try_into().unwrap());
+        let pktid = u32::from_be_bytes(packet2[..4].try_into().unwrap());
         if 2 != pktid {
             eprintln!("HANDSHAKE error, pktid: {} instead of {}", pktid, 2);
             return false;
         }
         // get remote iterface address
-        let remote_addr = u32::from_ne_bytes(packet2[4..8].try_into().unwrap());
+        let remote_addr = u32::from_be_bytes(packet2[4..8].try_into().unwrap());
         if (local_addr & netmask == remote_addr & netmask) && (local_addr != remote_addr) {
             eprintln!(
                 "HANDSHAKE error, address: local {} remote {}",
@@ -163,16 +163,16 @@ pub fn handler_client_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
             // print server address
             println!(
                 "Server interface address: {}",
-                IpAddr::from(remote_addr.to_ne_bytes())
+                IpAddr::from(remote_addr.to_be_bytes())
             );
         }
     }
     // 4. send ok to server
     {
         // packet id: 3
-        ostream.write(&(3 as u32).to_ne_bytes()).unwrap();
+        ostream.write(&(3 as u32).to_be_bytes()).unwrap();
         // all zeros is ok!
-        ostream.write(&(0 as u32).to_ne_bytes()).unwrap();
+        ostream.write(&(0 as u32).to_be_bytes()).unwrap();
         // send packet
         ostream.flush().unwrap();
     }

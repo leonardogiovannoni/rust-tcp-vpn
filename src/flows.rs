@@ -14,9 +14,9 @@ fn send_exit_pkt(
 ) {
     // build packet
     // exit packet: type 2
-    stream.write(&(2 as u32).to_ne_bytes()).unwrap();
+    stream.write(&(2 as u32).to_be_bytes()).unwrap();
     // exit reason, only 0 in currently valid
-    stream.write(&exit_reason.to_ne_bytes()).unwrap();
+    stream.write(&exit_reason.to_be_bytes()).unwrap();
     // send packet
     stream.flush().unwrap();
 }
@@ -46,11 +46,11 @@ fn handle_local2remote_pkt(
     };
     // build packet
     // data packet: type 1
-    stream.write(&(1 as u32).to_ne_bytes()).unwrap();
+    stream.write(&(1 as u32).to_be_bytes()).unwrap();
     // pkt length
-    stream.write(&(sz as u32).to_ne_bytes()).unwrap();
+    stream.write(&(sz as u32).to_be_bytes()).unwrap();
     // counter
-    stream.write(&counter.to_ne_bytes()).unwrap();
+    stream.write(&counter.to_be_bytes()).unwrap();
     // network packet
     stream.write(&buffer[..sz]).unwrap();
     // send packet
@@ -67,16 +67,16 @@ fn handle_remote2local_pkt(
     // read packet type
     let mut pkt_type: [u8; 4] = [0; 4];
     stream.read_exact(&mut pkt_type).unwrap();
-    let pkt_type = u32::from_ne_bytes(pkt_type);
+    let pkt_type = u32::from_be_bytes(pkt_type);
     match pkt_type {
         1 => {
             let mut pkt_len: [u8; 4] = [0; 4];
             stream.read_exact(&mut pkt_len).unwrap();
-            let pkt_len: u32 = u32::from_ne_bytes(pkt_len);
+            let pkt_len: u32 = u32::from_be_bytes(pkt_len);
             //println!("pkt_len = {}", pkt_len);
             let mut counter: [u8; 8] = [0; 8];
             stream.read_exact(&mut counter).unwrap();
-            let _counter = u64::from_ne_bytes(counter);
+            let _counter = u64::from_be_bytes(counter);
             // counter is unused now
             stream
                 .read_exact(&mut buffer[0..(pkt_len as usize)])
@@ -92,7 +92,7 @@ fn handle_remote2local_pkt(
         2 => {
             let mut exit_reason: [u8; 4] = [0; 4];
             stream.read_exact(&mut exit_reason).unwrap();
-            let exit_reason: u32 = u32::from_ne_bytes(exit_reason);
+            let exit_reason: u32 = u32::from_be_bytes(exit_reason);
             if exit_reason != 0 {
                 panic!("Unknown exit reason code {} in VPN protocol", exit_reason);
             }
