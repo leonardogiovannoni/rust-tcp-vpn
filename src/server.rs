@@ -10,6 +10,8 @@ pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::n
     let listener = TcpListener::bind(local).unwrap();
     // spawn thread handler
     let mut sigfile = crate::signals::spawn_sig_handler();
+    // allow crashing the process if no client is connected
+    crate::signals::handle_interrupt(false);
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
         let h = handshake::handler_server_handshake(&mut stream, &ifaddr, netmask);
@@ -19,8 +21,11 @@ pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::n
         }
         // bring interface up
         tunif::set_interface_up(&iffile, &ifname);
+        crate::signals::handle_interrupt(true);
         if !flows::handle_flow(&mut stream, &mut iffile, &mut sigfile) {
             break;
         }
+        crate::signals::handle_interrupt(false);
+        tunif::set_interface_down(&iffile, &ifname);
     }
 }
