@@ -27,6 +27,6 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
         std::process::exit(1)
     }
     // bring interface up
-    tunif::set_interface_up(&iffile, &ifname);
+    tunif::set_interface_up(&mut iffile, &ifname);
     flows::handle_flow(&mut stream, &mut iffile);
 }
