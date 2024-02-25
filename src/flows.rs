@@ -1,12 +1,32 @@
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::net::TcpStream;
 
+enum Status {
+    // continue
+    Continue,
+    // regular exit
+    ExitOk
+}
+
+fn send_exit_pkt(
+    stream: &mut impl std::io::Write,
+    exit_reason: u32
+) {
+    // build packet
+    // exit packet: type 2
+    stream.write(&(2 as u32).to_ne_bytes()).unwrap();
+    // exit reason, only 0 in currently valid
+    stream.write(&exit_reason.to_ne_bytes()).unwrap();
+    // send packet
+    stream.flush().unwrap();
+}
+
 fn handle_local2remote_pkt(
     iffile: &mut std::fs::File,
     stream: &mut impl std::io::Write,
     counter: &mut u64,
     buffer: &mut [u8],
-) {
+) -> Status {
     // packet is always fully read (if possible):
     // this is a special case tied to virtual interface
     // internals
@@ -35,13 +55,15 @@ fn handle_local2remote_pkt(
     stream.write(&buffer[..sz]).unwrap();
     // send packet
     stream.flush().unwrap();
+    // Everything Ok, continue
+    Status::Continue
 }
 
 fn handle_remote2local_pkt(
     iffile: &mut std::fs::File,
     stream: &mut impl std::io::BufRead,
     buffer: &mut [u8],
-) {
+) -> Status {
     // read packet type
     let mut pkt_type: [u8; 4] = [0; 4];
     stream.read_exact(&mut pkt_type).unwrap();
@@ -67,10 +89,22 @@ fn handle_remote2local_pkt(
             // it does not seem possible to flush virtual interface fd
             //iffile.flush().unwrap();
         }
+        2 => {
+            let mut exit_reason: [u8; 4] = [0; 4];
+            stream.read_exact(&mut exit_reason).unwrap();
+            let exit_reason: u32 = u32::from_ne_bytes(exit_reason);
+            if exit_reason != 0 {
+                panic!("Unknown exit reason code {} in VPN protocol", exit_reason);
+            }
+            // terminate VPN protocol
+            return Status::ExitOk;
+        }
         _ => {
             panic!("Unknown packet type: {} (only 1 valid)", pkt_type);
         }
     }
+    // Everything Ok, continue
+    Status::Continue
 }
 
 // https://docs.rs/nix/0.28.0/nix/poll/struct.PollFd.html
@@ -81,7 +115,7 @@ fn handle_remote2local_pkt(
 // endpoint (or in case of remote stream error), return false if
 // it exits because of local signal
 //
-// abort in case of other errors 
+// abort in case of other errors
 pub fn handle_flow(
     stream: &mut TcpStream,
     iffile: &mut std::fs::File,
@@ -119,7 +153,9 @@ pub fn handle_flow(
             eprintln!("CTRL+C");
             // consume pending signal data
             crate::signals::consume_sigpipe(sigfile);
-            // TODO: send exit packet
+            // send exit packet
+            let exit_reason = 0_u32; // normal exit
+            send_exit_pkt(&mut ostream, exit_reason);
             return false;
         }
         // check tcp connection
@@ -132,7 +168,11 @@ pub fn handle_flow(
         // drop is unnecessary because items are Copy
         // check interface
         if tcp_flag {
-            handle_remote2local_pkt(iffile, &mut istream, &mut buffer);
+            if let Status::ExitOk = handle_remote2local_pkt(iffile, &mut istream, &mut buffer) {
+                // remote endpoint exited
+                println!("Remote exit!");
+                return true;
+            }
         }
         if if_flag {
             handle_local2remote_pkt(iffile, &mut ostream, &mut counter, &mut buffer);

@@ -19,8 +19,8 @@ pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::n
         }
         // bring interface up
         tunif::set_interface_up(&iffile, &ifname);
-        flows::handle_flow(&mut stream, &mut iffile, &mut sigfile);
-        eprintln!("End of server work!");
-        std::process::exit(1)
+        if !flows::handle_flow(&mut stream, &mut iffile, &mut sigfile) {
+            break;
+        }
     }
 }
