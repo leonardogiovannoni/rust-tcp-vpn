@@ -1,8 +1,6 @@
-
-use crate::handshake;
 use crate::flows;
+use crate::handshake;
 use crate::tunif;
-
 
 use std::net::{IpAddr, TcpStream};
 use std::process;
@@ -14,7 +12,7 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
         Ok(stream) => {
             println!("Connection established!");
             stream
-        },
+        }
         Err(err) => {
             eprintln!("Cannot connect to: {} cause {}", remote, err);
             process::exit(1)

@@ -1,12 +1,10 @@
-
 // https://docs.rs/crate/argparse/0.2.2
 // https://docs.rs/clap/latest/clap/
 use clap::Parser;
 
 use std::net::{IpAddr, SocketAddr};
-use std::str::FromStr;
 use std::process;
-
+use std::str::FromStr;
 
 const DEFAULT_IFNAME: &str = "tun0";
 
@@ -21,18 +19,18 @@ pub enum Mode {
     // when connecting to remote need both ip and port
     Client {
         // TCP related data
-        remote:std::net::SocketAddr
+        remote: std::net::SocketAddr,
     },
     // when acting as server require address and port to
     // bind to for incoming connections
     Server {
         // TCP related data
-        local:std::net::SocketAddr
-    }
+        local: std::net::SocketAddr,
+    },
 }
 
 // Program can execute both as client or server
-pub struct Args{
+pub struct Args {
     pub interface: Interface,
     pub mode: Mode,
 }
@@ -45,10 +43,10 @@ struct Opts {
     // properties of local (server) or remote (client) endpoint
     /// (server) IP to accept connections on (client) remote server IP
     #[arg(long)]
-    host:String,
+    host: String,
     /// (server) TCP port to listen for connection (client) remote server port
     #[arg(short, long)]
-    port:u16,
+    port: u16,
 
     // properties describing virtual interface
     /// virtual interface name
@@ -56,10 +54,10 @@ struct Opts {
     ifname: String,
     /// IPv4 address of virtual interface
     #[arg(long)]
-    ifaddr:String,
+    ifaddr: String,
     /// netmask (1,32) of virtual interface address
     #[arg(short, long)]
-    netmask:u8,
+    netmask: u8,
 
     /// run as server (default: client)
     #[arg(short, long)]
@@ -90,12 +88,12 @@ pub fn parse_arg() -> Args {
         interface: Interface {
             ifname: args.ifname,
             ifaddr,
-            netmask: args.netmask
+            netmask: args.netmask,
         },
         mode: if args.server {
             Mode::Server { local: addr }
         } else {
             Mode::Client { remote: addr }
-        }
+        },
     }
 }

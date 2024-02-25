@@ -1,15 +1,12 @@
-
-
 pub mod client;
-pub mod parsing;
-pub mod handshake;
-pub mod server;
 pub mod flows;
+pub mod handshake;
+pub mod parsing;
+pub mod server;
 pub mod tunif;
 
 // How to use multiple module:
 //  https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html
-
 
 pub fn run(args: parsing::Args) {
     let ifname = args.interface.ifname;
@@ -21,5 +18,3 @@ pub fn run(args: parsing::Args) {
         parsing::Mode::Server { local } => server::execute_server(ifname, ifaddr, netmask, local),
     }
 }
-
-

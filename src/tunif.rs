@@ -1,34 +1,21 @@
-
 pub mod wrapper {
     extern "C" {
-        pub fn set_interface_name(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
+        pub fn set_interface_name(if_fd: cty::c_int, ifname: *const cty::c_char) -> ();
         pub fn set_interface_address(
             if_fd: cty::c_int,
             ifname: *const cty::c_char,
             addr: *const cty::c_char,
-            netmask: cty::c_int
+            netmask: cty::c_int,
         ) -> ();
-        pub fn set_interface_up(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
-        pub fn set_interface_down(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char
-        ) -> ();
+        pub fn set_interface_up(if_fd: cty::c_int, ifname: *const cty::c_char) -> ();
+        pub fn set_interface_down(if_fd: cty::c_int, ifname: *const cty::c_char) -> ();
     }
 }
 
-use std::os::fd::AsRawFd;
 use std::net::IpAddr;
+use std::os::fd::AsRawFd;
 
-pub fn set_interface_name(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
+pub fn set_interface_name(iffile: &std::fs::File, ifname: &str) -> () {
     let if_fd = iffile.as_raw_fd();
     let if_fd = if_fd as cty::c_int;
     let ifname = match std::ffi::CString::new(ifname) {
@@ -47,7 +34,7 @@ pub fn set_interface_address(
     iffile: &std::fs::File,
     ifname: &str,
     addr: &IpAddr,
-    netmask: i32
+    netmask: i32,
 ) -> () {
     let if_fd = iffile.as_raw_fd();
     let if_fd = if_fd as cty::c_int;
@@ -59,9 +46,7 @@ pub fn set_interface_address(
         }
     };
     let addr = match addr {
-        IpAddr::V4(_) => {
-            addr.to_string()
-        },
+        IpAddr::V4(_) => addr.to_string(),
         IpAddr::V6(_) => {
             eprintln!("IPv6 is currently unsupported for virtual interface");
             std::process::exit(1)
@@ -80,10 +65,7 @@ pub fn set_interface_address(
     }
 }
 
-pub fn set_interface_up(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
+pub fn set_interface_up(iffile: &std::fs::File, ifname: &str) -> () {
     let if_fd = iffile.as_raw_fd();
     let if_fd = if_fd as cty::c_int;
     let ifname = match std::ffi::CString::new(ifname) {
@@ -98,10 +80,7 @@ pub fn set_interface_up(
     }
 }
 
-pub fn set_interface_down(
-    iffile: &std::fs::File,
-    ifname: &str
-) -> () {
+pub fn set_interface_down(iffile: &std::fs::File, ifname: &str) -> () {
     let if_fd = iffile.as_raw_fd();
     let if_fd = if_fd as cty::c_int;
     let ifname = match std::ffi::CString::new(ifname) {
@@ -124,7 +103,8 @@ pub fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> st
     let iffile = match std::fs::File::options()
         .read(true)
         .write(true)
-        .open(DEV_FILE) {
+        .open(DEV_FILE)
+    {
         Ok(file) => file,
         Err(err) => {
             eprintln!("Error opening file {}: {}", DEV_FILE, err);
@@ -138,5 +118,3 @@ pub fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> st
     // return file handler
     iffile
 }
-
-
