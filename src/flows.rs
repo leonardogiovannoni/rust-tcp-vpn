@@ -39,22 +39,6 @@ fn handle_local2remote_pkt(iffile: &mut std::fs::File, stream: &mut impl std::io
 }
 
 
-pub fn handle_local2remote(iffile: std::fs::File, stream: TcpStream) -> thread::JoinHandle<()> {
-    thread::spawn(
-        move || {
-            let mut buffer: [u8; 4096] = [0; 4096];
-            let mut stream = BufWriter::with_capacity(64+4096, stream);
-            // count how many packets are sent
-            let mut counter: u64 = 0;
-            let mut iffile = iffile;
-            loop {
-                handle_local2remote_pkt(&mut iffile, &mut stream, &mut counter, &mut buffer);
-            }
-        }
-    )
-}
-
-
 fn handle_remote2local_pkt(iffile: &mut std::fs::File, stream: &mut impl std::io::BufRead, buffer: &mut [u8]) {
     // read packet type
     let mut pkt_type: [u8; 4] = [0; 4];
@@ -85,27 +69,6 @@ fn handle_remote2local_pkt(iffile: &mut std::fs::File, stream: &mut impl std::io
     }
 }
 
-pub fn handle_remote2local(stream: TcpStream, iffile: std::fs::File) -> thread::JoinHandle<()> {
-    thread::spawn(
-        move || {
-            let mut iffile = iffile;
-            let mut buffer: [u8; 4096] = [0; 4096];
-            let mut stream = BufReader::with_capacity(64+4096, stream);
-
-            loop {
-                handle_remote2local_pkt(&mut iffile, &mut stream, &mut buffer);
-            }
-        })
-}
-
-// handle packet flow
-// use 2 threads: [local->remote] and [remote->local]
-pub fn handle_flow_old(stream: &mut TcpStream, iffile: &mut std::fs::File) -> () {
-    let t1_hanle = handle_local2remote(iffile.try_clone().unwrap(), stream.try_clone().unwrap());
-    let t2_hanle = handle_remote2local(stream.try_clone().unwrap(), iffile.try_clone().unwrap());
-    t1_hanle.join().unwrap();
-    t2_hanle.join().unwrap();
-}
 
 // https://docs.rs/nix/0.28.0/nix/poll/struct.PollFd.html
 pub fn handle_flow(stream: &mut TcpStream, iffile: &mut std::fs::File) -> () {
