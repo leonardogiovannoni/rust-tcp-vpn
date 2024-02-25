@@ -3,6 +3,7 @@ pub mod flows;
 pub mod handshake;
 pub mod parsing;
 pub mod server;
+pub mod signals;
 pub mod tunif;
 
 // How to use multiple module:
