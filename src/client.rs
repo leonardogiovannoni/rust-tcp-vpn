@@ -18,12 +18,20 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
             process::exit(1)
         }
     };
+    
     // start handshake as client
-    let h = handshake::handler_client_handshake(&mut stream, &ifaddr, netmask);
-    if !h {
-        eprintln!("Failed client handshake");
-        std::process::exit(1)
-    }
+    // if true ok
+    let _h = match handshake::handler_client_handshake(&mut stream, &ifaddr, netmask) {
+        Ok(false) => {
+            eprintln!("Failed client handshake due to protocol error");
+            return;
+        }
+        Ok(h) => h,
+        Err(err) => {
+            eprintln!("Failed client handshake: {}", err);
+            return;
+        }
+    };
     // bring interface up
     tunif::set_interface_up(&mut iffile, &ifname);
     let mut sigfile = crate::signals::spawn_sig_handler();

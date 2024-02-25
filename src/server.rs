@@ -14,11 +14,18 @@ pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::n
     crate::signals::handle_interrupt(false);
     for stream in listener.incoming() {
         let mut stream = stream.unwrap();
-        let h = handshake::handler_server_handshake(&mut stream, &ifaddr, netmask);
-        if !h {
-            eprintln!("Failed server handshake");
-            std::process::exit(1)
-        }
+        // if true ok
+        let _h = match handshake::handler_server_handshake(&mut stream, &ifaddr, netmask) {
+            Ok(false) => {
+                eprintln!("Failed server handshake due to protocol error");
+                continue;
+            }
+            Ok(h) => h,
+            Err(err) => {
+                eprintln!("Failed server handshake: {}", err);
+                continue;
+            }
+        };
         // bring interface up
         tunif::set_interface_up(&iffile, &ifname);
         crate::signals::handle_interrupt(true);
