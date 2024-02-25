@@ -95,6 +95,26 @@ pub fn handle_flow(stream: &mut TcpStream, iffile: &mut std::fs::File) -> () {
     })
     .expect("Error setting Ctrl-C handler");
 
+    // set handler thread
+    thread::spawn(|| {
+        loop {
+            nix::unistd::pause();
+        }
+    });
+
+    // https://docs.rs/nix/latest/nix/sys/signal/struct.SigSet.html
+    use nix::sys::signal::{SigmaskHow, Signal, SigSet};
+    // block sigint in main thread
+    {
+        let mut mask = SigSet::empty();
+        mask.add(Signal::SIGINT);
+        nix::sys::signal::pthread_sigmask(
+            SigmaskHow::SIG_BLOCK,
+            Some(&mask),
+            None
+        ).unwrap();
+    }
+
     // buffer
     let mut buffer: [u8; 4096] = [0; 4096];
     // split both socket ends
