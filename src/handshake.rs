@@ -65,9 +65,9 @@ pub fn handler_server_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
             return false;
         }
         // check addresse: should not be equals but in the same subnet
-        if (local_addr & netmask == remote_addr & netmask) && (local_addr != remote_addr) {
+        if !((local_addr & netmask == remote_addr & netmask) && (local_addr != remote_addr)) {
             eprintln!(
-                "HANDSHAKE error, address: local {} remote {}",
+                "HANDSHAKE error, address: local {:#08x} remote {:#08x}",
                 local_addr, remote_addr
             );
             return false;
@@ -153,9 +153,9 @@ pub fn handler_client_handshake(stream: &mut TcpStream, ifaddr: &IpAddr, netmask
         }
         // get remote iterface address
         let remote_addr = u32::from_be_bytes(packet2[4..8].try_into().unwrap());
-        if (local_addr & netmask == remote_addr & netmask) && (local_addr != remote_addr) {
+        if !((local_addr & netmask == remote_addr & netmask) && (local_addr != remote_addr)) {
             eprintln!(
-                "HANDSHAKE error, address: local {} remote {}",
+                "HANDSHAKE error, address: local {:#08x} remote {:#08x}",
                 local_addr, remote_addr
             );
             return false;
