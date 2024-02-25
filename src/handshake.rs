@@ -15,7 +15,7 @@ const MAGIC: u32 = 0x12345678;
 pub fn handler_server_handshake(
     stream: &mut TcpStream,
     ifaddr: &IpAddr,
-    netmask: u8
+    netmask: u8,
 ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
     let ifaddr: &Ipv4Addr = match ifaddr {
         IpAddr::V4(addr) => &addr,
@@ -113,7 +113,7 @@ pub fn handler_server_handshake(
 pub fn handler_client_handshake(
     stream: &mut TcpStream,
     ifaddr: &IpAddr,
-    netmask: u8
+    netmask: u8,
 ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
     let ifaddr: &Ipv4Addr = match ifaddr {
         IpAddr::V4(addr) => &addr,

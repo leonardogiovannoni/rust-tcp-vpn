@@ -18,7 +18,7 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
             process::exit(1)
         }
     };
-    
+
     // start handshake as client
     // if true ok
     let _h = match handshake::handler_client_handshake(&mut stream, &ifaddr, netmask) {

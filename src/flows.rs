@@ -5,13 +5,10 @@ enum Status {
     // continue
     Continue,
     // regular exit
-    ExitOk
+    ExitOk,
 }
 
-fn send_exit_pkt(
-    stream: &mut impl std::io::Write,
-    exit_reason: u32
-) {
+fn send_exit_pkt(stream: &mut impl std::io::Write, exit_reason: u32) {
     // build packet
     // exit packet: type 2
     stream.write(&(2 as u32).to_be_bytes()).unwrap();
@@ -119,7 +116,7 @@ fn handle_remote2local_pkt(
 pub fn handle_flow(
     stream: &mut TcpStream,
     iffile: &mut std::fs::File,
-    sigfile: &mut std::fs::File
+    sigfile: &mut std::fs::File,
 ) -> bool {
     // buffer
     let mut buffer: [u8; 4096] = [0; 4096];
