@@ -33,7 +33,8 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
         }
     };
     // bring interface up
-    tunif::set_interface_up(&mut iffile, &ifname);
+    tunif::set_interface_up(&iffile, &ifname);
     let mut sigfile = crate::signals::spawn_sig_handler();
     flows::handle_flow(&mut stream, &mut iffile, &mut sigfile);
+    tunif::set_interface_down(&iffile, &ifname);
 }

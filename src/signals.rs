@@ -45,7 +45,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
             std::process::exit(1);
         }
         // handle signal
-        w.write(&([1] as [u8; 1])).unwrap();
+        w.write_all(&([1] as [u8; 1])).unwrap();
     })
     .expect("Error setting Ctrl-C handler");
     // set handler thread
@@ -64,7 +64,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
             }
             // https://doc.rust-lang.org/std/result/enum.Result.html#method.expect
         })
-        .expect(&format!("Error spawning thread '{}'", THREAD_NAME));
+        .unwrap_or_else(|_| panic!("Error spawning thread '{}'", THREAD_NAME));
     // block sigint in main thread
     let mut mask = SigSet::empty();
     mask.add(Signal::SIGINT);
@@ -79,5 +79,5 @@ pub fn spawn_sig_handler() -> std::fs::File {
 // consume data waiting inside the
 pub fn consume_sigpipe(sigfile: &mut std::fs::File) {
     let mut buf: [u8; 8] = [0; 8];
-    sigfile.read(&mut buf[..]).unwrap();
+    let _ = sigfile.read(&mut buf[..]).unwrap();
 }

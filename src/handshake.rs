@@ -18,7 +18,7 @@ pub fn handler_server_handshake(
     netmask: u8,
 ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
     let ifaddr: &Ipv4Addr = match ifaddr {
-        IpAddr::V4(addr) => &addr,
+        IpAddr::V4(addr) => addr,
         _ => {
             eprintln!("Cannot accept IPv6");
             std::process::exit(1)
@@ -80,9 +80,9 @@ pub fn handler_server_handshake(
     // 3. send server ifaddr
     {
         // packet id: 2
-        ostream.write(&(2 as u32).to_be_bytes())?;
+        ostream.write_all(&2_u32.to_be_bytes())?;
         // server interface address
-        ostream.write(&local_addr.to_be_bytes())?;
+        ostream.write_all(&local_addr.to_be_bytes())?;
         // send packet
         ostream.flush()?;
     }
@@ -116,7 +116,7 @@ pub fn handler_client_handshake(
     netmask: u8,
 ) -> std::result::Result<bool, Box<dyn std::error::Error>> {
     let ifaddr: &Ipv4Addr = match ifaddr {
-        IpAddr::V4(addr) => &addr,
+        IpAddr::V4(addr) => addr,
         _ => {
             eprintln!("Cannot accept IPv6");
             std::process::exit(1)
@@ -137,14 +137,14 @@ pub fn handler_client_handshake(
     // 1. send intial packet: 16 bytes
     {
         // insert magic
-        ostream.write(&MAGIC.to_be_bytes())?;
+        ostream.write_all(&MAGIC.to_be_bytes())?;
         // packet id: 1
-        ostream.write(&(1 as u32).to_be_bytes())?;
+        ostream.write_all(&1_u32.to_be_bytes())?;
         // IPv4 address - already in network byte order
         // https://doc.rust-lang.org/std/net/struct.Ipv4Addr.html#method.octets
-        ostream.write(&local_addr.to_be_bytes())?;
+        ostream.write_all(&local_addr.to_be_bytes())?;
         // netmask
-        ostream.write(&netmask.to_be_bytes())?;
+        ostream.write_all(&netmask.to_be_bytes())?;
         // send packet
         ostream.flush()?;
     }
@@ -178,9 +178,9 @@ pub fn handler_client_handshake(
     // 4. send ok to server
     {
         // packet id: 3
-        ostream.write(&(3 as u32).to_be_bytes())?;
+        ostream.write_all(&3_u32.to_be_bytes())?;
         // all zeros is ok!
-        ostream.write(&(0 as u32).to_be_bytes())?;
+        ostream.write_all(&0_u32.to_be_bytes())?;
         // send packet
         ostream.flush()?;
     }

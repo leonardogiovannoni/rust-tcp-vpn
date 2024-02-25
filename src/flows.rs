@@ -11,9 +11,9 @@ enum Status {
 fn send_exit_pkt(stream: &mut impl std::io::Write, exit_reason: u32) {
     // build packet
     // exit packet: type 2
-    stream.write(&(2 as u32).to_be_bytes()).unwrap();
+    stream.write_all(&2_u32.to_be_bytes()).unwrap();
     // exit reason, only 0 in currently valid
-    stream.write(&exit_reason.to_be_bytes()).unwrap();
+    stream.write_all(&exit_reason.to_be_bytes()).unwrap();
     // send packet
     stream.flush().unwrap();
 }
@@ -43,13 +43,13 @@ fn handle_local2remote_pkt(
     };
     // build packet
     // data packet: type 1
-    stream.write(&(1 as u32).to_be_bytes()).unwrap();
+    stream.write_all(&1_u32.to_be_bytes()).unwrap();
     // pkt length
-    stream.write(&(sz as u32).to_be_bytes()).unwrap();
+    stream.write_all(&(sz as u32).to_be_bytes()).unwrap();
     // counter
-    stream.write(&counter.to_be_bytes()).unwrap();
+    stream.write_all(&counter.to_be_bytes()).unwrap();
     // network packet
-    stream.write(&buffer[..sz]).unwrap();
+    stream.write_all(&buffer[..sz]).unwrap();
     // send packet
     stream.flush().unwrap();
     // Everything Ok, continue

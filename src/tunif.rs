@@ -107,9 +107,9 @@ pub fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> st
         }
     };
     // set interface name
-    set_interface_name(&iffile, &ifname);
+    set_interface_name(&iffile, ifname);
     // set interface ip
-    set_interface_address(&iffile, &ifname, &ifaddr, netmask as i32);
+    set_interface_address(&iffile, ifname, &ifaddr, netmask as i32);
     // return file handler
     iffile
 }
