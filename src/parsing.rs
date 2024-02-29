@@ -54,7 +54,7 @@ struct Opts {
     ifname: String,
     /// IPv4 address of virtual interface
     #[arg(long)]
-    ifaddr: String,
+    ifaddr: IpAddr,
     /// netmask (1,32) of virtual interface address
     #[arg(short, long)]
     netmask: u8,
@@ -75,13 +75,7 @@ pub fn parse_arg() -> Args {
             process::exit(1)
         }
     };
-    let ifaddr = match IpAddr::from_str(&args.ifaddr) {
-        Ok(addr) => addr,
-        Err(err) => {
-            eprintln!("Error parsing address: {}", err);
-            process::exit(1)
-        }
-    };
+    let ifaddr = args.ifaddr;
     // IP address to be used in network connection
     let addr = SocketAddr::new(host, args.port);
     Args {
