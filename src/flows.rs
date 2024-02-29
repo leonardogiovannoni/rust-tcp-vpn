@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, BufWriter, Read, Write};
 use std::net::TcpStream;
 
 enum Status {
