@@ -1,6 +1,9 @@
 # Description
 A simple toy point-to-point VPN based on Linux TUN interfaces and written in Rust. The VPN works on TCP and not on UDP because TCP connections can be easily handled with ssh redirections and other tools that require more work to be adapted when UDP is involved.
 
+# Why TCP
+UDP is commonly used in many VPN-related technology (VXLAN, GENEVE, wiregard, ...), but UDP sometimes has issues (not everyone likes it - wonder why - and it might be blocked or limited). So, also because once I needed to connect multiple machines with virtual interfaces and TCP was the best option and working with "ssh -w any_any ..." was complex, I decided to use it. Furthermore, TCP can easily be tunnelled with ssh -R/-L.
+
 # How to test
 Open multiple terminals as root, then apply following commands opportunely:
 
