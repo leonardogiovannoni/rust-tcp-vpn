@@ -4,7 +4,12 @@ use crate::tunif;
 
 use std::net::{IpAddr, TcpListener};
 
-pub fn execute_server(ifname: String, ifaddr: IpAddr, netmask: u8, local: std::net::SocketAddr) -> std::result::Result<(), Box<dyn std::error::Error>> {
+pub fn execute_server(
+    ifname: String,
+    ifaddr: IpAddr,
+    netmask: u8,
+    local: std::net::SocketAddr,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut iffile = tunif::initialize_tun_interface(&ifname, ifaddr, netmask);
     // wait for remote connection
     let listener = match TcpListener::bind(local) {

@@ -5,7 +5,12 @@ use crate::tunif;
 use std::net::{IpAddr, TcpStream};
 use std::process;
 
-pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::net::SocketAddr) -> std::result::Result<(), Box<dyn std::error::Error>> {
+pub fn execute_client(
+    ifname: String,
+    ifaddr: IpAddr,
+    netmask: u8,
+    remote: std::net::SocketAddr,
+) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut iffile = tunif::initialize_tun_interface(&ifname, ifaddr, netmask);
     // try to connect to remote server
     let mut stream = match TcpStream::connect(remote) {
@@ -38,6 +43,6 @@ pub fn execute_client(ifname: String, ifaddr: IpAddr, netmask: u8, remote: std::
     tunif::set_interface_down(&iffile, &ifname);
     match ans {
         Err(e) => Err(e),
-        _ => Ok(())
+        _ => Ok(()),
     }
 }

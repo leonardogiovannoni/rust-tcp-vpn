@@ -36,6 +36,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
     STARTED.store(true, Ordering::Relaxed);
     // https://docs.rs/nix/0.28.0/nix/poll/struct.PollFd.html#method.new
     // https://docs.rs/nix/latest/nix/unistd/fn.pipe.html
+    // syscall is not expected to fail, if so must panic!
     let (r, w) = nix::unistd::pipe().unwrap();
     let mut w: File = w.into();
     // set handler
@@ -44,7 +45,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
         if !HANDLE_SIGNAL.load(Ordering::Relaxed) {
             std::process::exit(1);
         }
-        // handle signal
+        // handle signal - should never fail
         w.write_all(&([1] as [u8; 1])).unwrap();
     })
     .expect("Error setting Ctrl-C handler");
@@ -68,6 +69,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
     // block sigint in main thread
     let mut mask = SigSet::empty();
     mask.add(Signal::SIGINT);
+    // if fails to block signal should panic
     nix::sys::signal::pthread_sigmask(SigmaskHow::SIG_BLOCK, Some(&mask), None).unwrap();
     // handle signals
     handle_interrupt(true);
@@ -79,5 +81,6 @@ pub fn spawn_sig_handler() -> std::fs::File {
 // consume data waiting inside the
 pub fn consume_sigpipe(sigfile: &mut std::fs::File) {
     let mut buf: [u8; 8] = [0; 8];
+    // if fail to read from pipe bad error occurs!
     let _ = sigfile.read(&mut buf[..]).unwrap();
 }

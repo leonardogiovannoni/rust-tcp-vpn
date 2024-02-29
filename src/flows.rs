@@ -1,4 +1,4 @@
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::net::TcpStream;
 
 enum Status {
@@ -10,7 +10,7 @@ enum Status {
 
 fn send_exit_pkt(
     stream: &mut impl std::io::Write,
-    exit_reason: u32
+    exit_reason: u32,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
     // build packet
     // exit packet: type 2
@@ -33,6 +33,7 @@ fn handle_local2remote_pkt(
     // internals
     let sz = match iffile.read(buffer) {
         Ok(0) => {
+            // should never happens!
             panic!("UNEXPECTED EMPTY PACKET from Virtual interface!");
         }
         Ok(sz) => {
@@ -41,6 +42,7 @@ fn handle_local2remote_pkt(
             sz
         }
         Err(err) => {
+            // should never happens!
             eprintln!("Error reading from virtual interface: {}", err);
             std::process::exit(1)
         }
@@ -79,15 +81,14 @@ fn handle_remote2local_pkt(
             stream.read_exact(&mut counter)?;
             let _counter = u64::from_be_bytes(counter);
             // counter is unused now
-            stream
-                .read_exact(&mut buffer[0..(pkt_len as usize)])?;
+            stream.read_exact(&mut buffer[0..(pkt_len as usize)])?;
             // https://doc.rust-lang.org/std/fs/struct.File.html#method.write_all_at-1
             match iffile.write_all(&buffer[0..(pkt_len as usize)]) {
                 // Everything Ok, continue
                 Ok(()) => Ok(Status::Continue),
                 Err(e) => {
                     let msg = format!("Failed to write pkt to virtual interface due to: {}", e);
-                    return Err(msg.into())
+                    Err(msg.into())
                 }
             }
             // it does not seem possible to flush virtual interface fd
@@ -99,13 +100,15 @@ fn handle_remote2local_pkt(
             let exit_reason: u32 = u32::from_be_bytes(exit_reason);
             if exit_reason != 0 {
                 let msg = format!("Unknown exit reason code {} in VPN protocol", exit_reason);
-                return Err(msg.into());
+                Err(msg.into())
+            } else {
+                // terminate VPN protocol
+                Ok(Status::ExitOk)
             }
-            // terminate VPN protocol
-            return Ok(Status::ExitOk);
         }
         _ => {
-            panic!("Unknown packet type: {} (only 1 valid)", pkt_type);
+            let msg = format!("Unknown packet type: {} (only 1 valid)", pkt_type);
+            Err(msg.into())
         }
     }
 }
@@ -155,6 +158,7 @@ pub fn handle_flow(
         if match pipe_fd.any() {
             Some(flag) => flag,
             None => {
+                // should never happen with PollFlags::POLLIN
                 panic!("ERROR: pipe_fd.any() returned None!");
             }
         } {
@@ -163,7 +167,10 @@ pub fn handle_flow(
             // send exit packet
             let exit_reason = 0_u32; // normal exit
             if let Err(err) = send_exit_pkt(&mut ostream, exit_reason) {
-                eprintln!("Anomalous error occurred while sending exit packet: {}", err);
+                eprintln!(
+                    "Anomalous error occurred while sending exit packet: {}",
+                    err
+                );
             }
             return Ok(false);
         }
@@ -171,12 +178,14 @@ pub fn handle_flow(
         let if_flag = match if_fd.any() {
             Some(flag) => flag,
             None => {
+                // should never happen with PollFlags::POLLIN
                 panic!("ERROR: if_fd.any() returned None!");
             }
         };
         let tcp_flag = match tcp_fd.any() {
             Some(flag) => flag,
             None => {
+                // should never happen with PollFlags::POLLIN
                 panic!("ERROR: tcp_fd.any() returned None!");
             }
         };
@@ -187,10 +196,27 @@ pub fn handle_flow(
         // drop is unnecessary because items are Copy
         // check interface
         if tcp_flag {
-            if let Status::ExitOk = handle_remote2local_pkt(iffile, &mut istream, &mut buffer)? {
-                // remote endpoint exited
-                println!("Remote exit!");
-                return Ok(true);
+            loop {
+                if let Status::ExitOk = handle_remote2local_pkt(iffile, &mut istream, &mut buffer)?
+                {
+                    // remote endpoint exited
+                    println!("Remote exit!");
+                    return Ok(true);
+                }
+                let test_read = istream.fill_buf();
+                match test_read {
+                    Ok(buf) => {
+                        if buf.is_empty() {
+                            println!("buf.len() == 0, break!");
+                            break;
+                        } else {
+                            println!("More packet!");
+                        }
+                    }
+                    Err(err) => {
+                        return Err(err.into());
+                    }
+                }
             }
         }
         if if_flag {
