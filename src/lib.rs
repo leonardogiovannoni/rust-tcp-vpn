@@ -9,7 +9,7 @@ pub mod tunif;
 // How to use multiple module:
 //  https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html
 
-pub fn run(args: parsing::Args) {
+pub fn run(args: parsing::Args) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let ifname = args.interface.ifname;
     let ifaddr = args.interface.ifaddr;
     let netmask = args.interface.netmask;

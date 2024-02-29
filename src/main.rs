@@ -7,7 +7,10 @@ use rust_tcp_vpn::run;
 
 fn main() -> std::io::Result<()> {
     let args = parsing::parse_arg();
-    run(args);
+    if let Err(err) = run(args) {
+        eprintln!("Execution failed for: {}", err);
+        std::process::exit(1);
+    };
 
     Ok(())
 }

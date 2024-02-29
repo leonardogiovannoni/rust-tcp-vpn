@@ -25,11 +25,11 @@ pub fn handler_server_handshake(
         }
     };
     // https://doc.rust-lang.org/std/net/struct.TcpStream.html#method.try_clone
-    let ostream = stream.try_clone().unwrap();
+    let ostream = stream.try_clone()?;
     // https://doc.rust-lang.org/std/io/struct.BufWriter.html#method.with_capacity
     let mut ostream = BufWriter::with_capacity(64, ostream);
     // read stream
-    let istream = stream.try_clone().unwrap();
+    let istream = stream.try_clone()?;
     let mut istream = BufReader::with_capacity(64, istream);
 
     // classic netmask
@@ -123,11 +123,11 @@ pub fn handler_client_handshake(
         }
     };
     // https://doc.rust-lang.org/std/net/struct.TcpStream.html#method.try_clone
-    let ostream = stream.try_clone().unwrap();
+    let ostream = stream.try_clone()?;
     // https://doc.rust-lang.org/std/io/struct.BufWriter.html#method.with_capacity
     let mut ostream = BufWriter::with_capacity(64, ostream);
     // read stream
-    let istream = stream.try_clone().unwrap();
+    let istream = stream.try_clone()?;
     let mut istream = BufReader::with_capacity(64, istream);
 
     // classic netmask
