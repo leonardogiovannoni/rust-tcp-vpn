@@ -18,3 +18,16 @@ RUST_BACKTRACE=1 cargo run -- --ifname tun0 --ifaddr 172.19.88.1 --netmask 24 --
 # run instances as clients inside secondary network namespace
 RUST_BACKTRACE=1 ip netns exec NS1 cargo run -- --ifname tun1 --ifaddr 172.19.88.2 --netmask 24 --host 172.19.66.1 --port 1789
 ```
+
+# How to run release version
+Two options:
+- rely on cargo:
+```bash
+cargo run --release -- [common args...]
+```
+- invoke executable directly:
+```bash
+./target/release/rust-tcp-vpn [common args...]
+```
+
+
