@@ -203,19 +203,9 @@ pub fn handle_flow(
                     println!("Remote exit!");
                     return Ok(true);
                 }
-                let test_read = istream.fill_buf();
-                match test_read {
-                    Ok(buf) => {
-                        if buf.is_empty() {
-                            println!("buf.len() == 0, break!");
-                            break;
-                        } else {
-                            println!("More packet!");
-                        }
-                    }
-                    Err(err) => {
-                        return Err(err.into());
-                    }
+                // https://doc.rust-lang.org/std/io/struct.BufReader.html#method.buffer
+                if istream.buffer().is_empty() {
+                    break;
                 }
             }
         }
