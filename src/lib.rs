@@ -5,11 +5,9 @@ pub mod parsing;
 pub mod server;
 pub mod signals;
 pub mod tunif;
+use anyhow::Result;
 
-// How to use multiple module:
-//  https://doc.rust-lang.org/book/ch07-05-separating-modules-into-different-files.html
-
-pub fn run(args: parsing::Args) -> std::result::Result<(), Box<dyn std::error::Error>> {
+pub fn run(args: parsing::Args) -> Result<()> {
     let ifname = args.interface.ifname;
     let ifaddr = args.interface.ifaddr;
     let netmask = args.interface.netmask;

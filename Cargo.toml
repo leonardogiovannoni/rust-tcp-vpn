@@ -6,11 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = { version = "1.0.95", features = ["backtrace"] }
 byteorder = "1.5.0"
 clap = { version = "4.5.1", features = ["derive"] }
 ctrlc = "3.4"
 cty = "0.2.2"
+libc = "0.2.169"
 nix = { version = "0.28.0", features = ["poll", "signal"] }
-
-[build-dependencies]
-cc = "1.0"
+socket2 = "0.5.8"

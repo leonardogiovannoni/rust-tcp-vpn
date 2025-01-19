@@ -1,115 +1,158 @@
-pub mod wrapper {
-    extern "C" {
-        pub fn set_interface_name(if_fd: cty::c_int, ifname: *const cty::c_char);
-        pub fn set_interface_address(
-            if_fd: cty::c_int,
-            ifname: *const cty::c_char,
-            addr: *const cty::c_char,
-            netmask: cty::c_int,
-        );
-        pub fn set_interface_up(if_fd: cty::c_int, ifname: *const cty::c_char);
-        pub fn set_interface_down(if_fd: cty::c_int, ifname: *const cty::c_char);
+use std::ffi::{CStr, CString};
+use std::fs::File;
+use std::net::{Ipv4Addr, SocketAddrV4};
+use std::os::fd::{AsFd, AsRawFd};
+
+use anyhow::{bail, Result};
+use socket2::SockAddr;
+
+#[inline(always)]
+fn get_netmask(n: u8) -> u32 {
+    assert!(n <= 32);
+    0xFFFFFFFFu32.wrapping_shl(32 - n as u32)
+}
+
+struct Socket(i32);
+
+impl Socket {
+    fn new() -> Result<Self> {
+        let socket = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
+        if socket < 0 {
+            bail!("Error creating socket")
+        }
+        Ok(Socket(socket))
+    }
+
+    fn ioctl(&self, request: u64, mut ifr: libc::ifreq) -> Result<()> {
+        let tmp: *mut libc::ifreq = &raw mut ifr;
+        let res = unsafe { libc::ioctl(self.0, request, tmp) };
+        if res < 0 {
+            let err = std::io::Error::last_os_error();
+            bail!("Error setting interface address: {}", err);
+        }
+        Ok(())
     }
 }
 
-use std::net::IpAddr;
-use std::os::fd::AsRawFd;
-
-pub fn set_interface_name(iffile: &std::fs::File, ifname: &str) {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
+impl Drop for Socket {
+    fn drop(&mut self) {
+        unsafe {
+            libc::close(self.0);
         }
-    };
-    unsafe {
-        wrapper::set_interface_name(if_fd, ifname.as_ptr());
     }
 }
 
-pub fn set_interface_address(iffile: &std::fs::File, ifname: &str, addr: &IpAddr, netmask: i32) {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
+unsafe fn ifr_create(ifname: &CStr, flags_fn: impl FnOnce(&mut libc::ifreq)) -> libc::ifreq {
+    let mut ifr: libc::ifreq = unsafe { core::mem::zeroed() };
+    for (i, &c) in ifname.to_bytes().iter().enumerate() {
+        ifr.ifr_name[i] = c as i8;
+    }
+    ifr.ifr_name.last_mut().map(|c| *c = 0).unwrap();
+    flags_fn(&mut ifr);
+    ifr
+}
+
+fn set_interface_name(file: &File, ifname: &CStr) -> Result<()> {
+    let ifr = unsafe {
+        ifr_create(ifname, |ifr| {
+            ifr.ifr_ifru.ifru_flags = (libc::IFF_TUN | libc::IFF_NO_PI) as i16;
+        })
     };
-    let addr = match addr {
-        IpAddr::V4(_) => addr.to_string(),
-        IpAddr::V6(_) => {
-            eprintln!("IPv6 is currently unsupported for virtual interface");
-            std::process::exit(1)
-        }
+    let res = unsafe { libc::ioctl(file.as_raw_fd(), libc::TUNSETIFF, &ifr) };
+    if res < 0 {
+        let err = std::io::Error::last_os_error();
+        bail!("Error setting interface name: {}", err);
+    }
+    Ok(())
+}
+
+fn set_interface_address(socket: &Socket, ifname: &CStr, addr: &Ipv4Addr) -> Result<()> {
+    let sockaddr: SockAddr = SocketAddrV4::new(*addr, 0).into();
+    let tmp = unsafe { core::ptr::read(sockaddr.as_ptr()) };
+    let ifr = unsafe { ifr_create(ifname, |ifr| ifr.ifr_ifru.ifru_addr = tmp) };
+    socket.ioctl(libc::SIOCSIFADDR, ifr)?;
+    Ok(())
+}
+
+fn set_subnet_mask(socket: &Socket, ifname: &CStr, netmask: u8) -> Result<()> {
+    let mask = get_netmask(netmask).to_be_bytes();
+    let ipv4addr = Ipv4Addr::new(mask[0], mask[1], mask[2], mask[3]);
+    let sockaddr: SockAddr = SocketAddrV4::new(ipv4addr, 0).into();
+    let tmp = unsafe { core::ptr::read(sockaddr.as_ptr()) };
+    let ifr = unsafe { ifr_create(ifname, |ifr| ifr.ifr_ifru.ifru_netmask = tmp) };
+    socket.ioctl(libc::SIOCSIFNETMASK, ifr)?;
+    Ok(())
+}
+
+fn set_interface_up(socket: &Socket, ifname: &CStr) -> Result<()> {
+    let ifr = unsafe {
+        ifr_create(ifname, |ifr| {
+            ifr.ifr_ifru.ifru_flags |= libc::IFF_UP as i16;
+        })
     };
-    let addr = match std::ffi::CString::new(addr) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
+    socket.ioctl(libc::SIOCSIFFLAGS, ifr)?;
+    Ok(())
+}
+
+fn set_interface_down(socket: &Socket, ifname: &CStr) -> Result<()> {
+    let ifr = unsafe {
+        ifr_create(ifname, |ifr| {
+            ifr.ifr_ifru.ifru_flags &= !(libc::IFF_UP as i16);
+        })
     };
-    let netmask = netmask as cty::c_int;
-    unsafe {
-        wrapper::set_interface_address(if_fd, ifname.as_ptr(), addr.as_ptr(), netmask);
+    socket.ioctl(libc::SIOCSIFFLAGS, ifr)?;
+    Ok(())
+}
+
+pub struct Iface {
+    fd: File,
+    name: CString,
+    ip: Ipv4Addr,
+    netmask: u8,
+}
+
+impl Iface {
+    pub fn new(n: &str, ip: Ipv4Addr, netmask: u8) -> Result<Self> {
+        if netmask > 32 {
+            bail!("Netmask should be less than 32")
+        }
+        if n.len() > 16 {
+            bail!("Interface name too long")
+        }
+        let fd = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open("/dev/net/tun")?;
+
+        let name = CString::new(n)?;
+        set_interface_name(&fd, &name)?;
+        let socket = Socket::new()?;
+        set_interface_address(&socket, &name, &ip)?;
+        set_subnet_mask(&socket, &name, netmask)?;
+        set_interface_up(&socket, &name)?;
+        Ok(Iface {
+            fd,
+            name,
+            ip,
+            netmask,
+        })
+    }
+}
+impl AsRef<File> for Iface {
+    fn as_ref(&self) -> &File {
+        &self.fd
     }
 }
 
-pub fn set_interface_up(iffile: &std::fs::File, ifname: &str) {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    unsafe {
-        wrapper::set_interface_up(if_fd, ifname.as_ptr());
+impl AsFd for Iface {
+    fn as_fd(&self) -> std::os::unix::prelude::BorrowedFd<'_> {
+        self.fd.as_fd()
     }
 }
 
-pub fn set_interface_down(iffile: &std::fs::File, ifname: &str) {
-    let if_fd = iffile.as_raw_fd();
-    let if_fd = if_fd as cty::c_int;
-    let ifname = match std::ffi::CString::new(ifname) {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("Error creating cstring: {}", e);
-            std::process::exit(1)
-        }
-    };
-    unsafe {
-        wrapper::set_interface_down(if_fd, ifname.as_ptr());
+impl Drop for Iface {
+    fn drop(&mut self) {
+        let f = || -> Result<()> { set_interface_down(&Socket::new()?, &self.name) };
+        f().unwrap();
     }
-}
-
-const DEV_FILE: &str = "/dev/net/tun";
-
-// inizialize virtual interface but do not bring it up
-pub fn initialize_tun_interface(ifname: &str, ifaddr: IpAddr, netmask: u8) -> std::fs::File {
-    // open virtual device
-    let iffile = match std::fs::File::options()
-        .read(true)
-        .write(true)
-        .open(DEV_FILE)
-    {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Error opening file {}: {}", DEV_FILE, err);
-            std::process::exit(1)
-        }
-    };
-    // set interface name
-    set_interface_name(&iffile, ifname);
-    // set interface ip
-    set_interface_address(&iffile, ifname, &ifaddr, netmask as i32);
-    // return file handler
-    iffile
 }

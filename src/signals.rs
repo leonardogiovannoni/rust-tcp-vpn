@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-
+use anyhow::{bail, Result};
 const THREAD_NAME: &str = "sigthread";
 
 // Signal thread created?
@@ -25,18 +25,24 @@ pub fn handle_interrupt(flag: bool) {
 /// WARNING! Must be called at most once!
 //
 // internally call handle_interrupt(true)
-pub fn spawn_sig_handler() -> std::fs::File {
-    // check guard flag
-    if STARTED.load(Ordering::Relaxed) {
-        panic!(
-            "Cannot call {} multiple times!",
-            "signals::spawn_sig_handler"
-        );
+pub fn spawn_sig_handler() -> Result<File> {
+    loop {
+        let old = STARTED.load(Ordering::Relaxed);
+        if old {
+            bail!(
+                "Cannot call {} multiple times!",
+                "signals::spawn_sig_handler"
+            );
+        }
+        if STARTED.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+            break;
+        }
     }
-    STARTED.store(true, Ordering::Relaxed);
+
     // https://docs.rs/nix/0.28.0/nix/poll/struct.PollFd.html#method.new
     // https://docs.rs/nix/latest/nix/unistd/fn.pipe.html
     // syscall is not expected to fail, if so must panic!
+
     let (r, w) = nix::unistd::pipe().unwrap();
     let mut w: File = w.into();
     // set handler
@@ -47,8 +53,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
         }
         // handle signal - should never fail
         w.write_all(&([1] as [u8; 1])).unwrap();
-    })
-    .expect("Error setting Ctrl-C handler");
+    })?;
     // set handler thread
     // https://doc.rust-lang.org/std/thread/fn.spawn.html
     // note: as the returned handler is dropped the thread is
@@ -64,8 +69,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
                 nix::unistd::pause();
             }
             // https://doc.rust-lang.org/std/result/enum.Result.html#method.expect
-        })
-        .unwrap_or_else(|_| panic!("Error spawning thread '{}'", THREAD_NAME));
+        })?;
     // block sigint in main thread
     let mut mask = SigSet::empty();
     mask.add(Signal::SIGINT);
@@ -74,8 +78,7 @@ pub fn spawn_sig_handler() -> std::fs::File {
     // handle signals
     handle_interrupt(true);
     // spawned thread remains the only able to handle SIGINT
-    let r: File = r.into();
-    r
+    Ok(r.into())
 }
 
 // consume data waiting inside the
