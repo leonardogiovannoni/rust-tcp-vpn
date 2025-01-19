@@ -1,8 +1,9 @@
 use crate::tunif::Iface;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use nix::poll::PollFd;
 use nix::poll::PollFlags;
 use nix::poll::PollTimeout;
+use nix::poll::poll;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::net::TcpStream;
 use std::os::fd::AsFd;
@@ -105,19 +106,18 @@ pub fn handle_flow(
     iffile: &mut Iface,
     sigfile: &mut std::fs::File,
 ) -> Result<bool> {
-    // buffer
-    let mut buffer: [u8; 4096] = [0; 4096];
+    let mut buffer = [0; 4096];
     // split both socket ends
     let mut ostream = BufWriter::with_capacity(64 + 4096, stream.try_clone()?);
     let mut istream = BufReader::with_capacity(64 + 4096, stream.try_clone()?);
     // count how many packets are sent?
-    let mut counter: u64 = 0;
+    let mut counter = 0;
 
     loop {
         let mut fds = [sigfile.as_fd(), stream.as_fd(), iffile.as_fd()]
             .map(|fd| PollFd::new(fd, PollFlags::POLLIN));
         // https://docs.rs/nix/0.28.0/nix/poll/fn.poll.html
-        let ret = nix::poll::poll(&mut fds, PollTimeout::NONE)?;
+        let ret = poll(&mut fds, PollTimeout::NONE)?;
         if ret <= 0 {
             bail!("Non positive nix::poll::poll");
         }
@@ -128,7 +128,7 @@ pub fn handle_flow(
         if b {
             // consume pending signal data
             crate::signals::consume_sigpipe(sigfile);
-            let exit_reason = 0_u32; // normal exit
+            let exit_reason = 0; // normal exit
             if let Err(err) = send_exit_pkt(&mut ostream, exit_reason) {
                 bail!(
                     "Anomalous error occurred while sending exit packet: {}",

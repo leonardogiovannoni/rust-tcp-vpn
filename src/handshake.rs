@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::net::{IpAddr, Ipv4Addr, TcpStream};
 
@@ -154,7 +154,11 @@ fn send_ok_to_server(ostream: &mut BufWriter<TcpStream>) -> Result<(), anyhow::E
     Ok(())
 }
 
-fn check_server_response(istream: &mut BufReader<TcpStream>, netmask: u32, local_addr: u32) -> Result<(), anyhow::Error> {
+fn check_server_response(
+    istream: &mut BufReader<TcpStream>,
+    netmask: u32,
+    local_addr: u32,
+) -> Result<(), anyhow::Error> {
     let mut packet: [u8; 8] = [0; 8];
     istream.read_exact(&mut packet)?;
     let scan = packet.as_slice();
@@ -180,7 +184,11 @@ fn check_server_response(istream: &mut BufReader<TcpStream>, netmask: u32, local
     Ok(())
 }
 
-fn send_initial_packet(ostream: &mut BufWriter<TcpStream>, netmask: u32, local_addr: u32) -> Result<(), anyhow::Error> {
+fn send_initial_packet(
+    ostream: &mut BufWriter<TcpStream>,
+    netmask: u32,
+    local_addr: u32,
+) -> Result<(), anyhow::Error> {
     ostream.write_all(&MAGIC.to_be_bytes())?;
     ostream.write_all(&1_u32.to_be_bytes())?;
     ostream.write_all(&local_addr.to_be_bytes())?;

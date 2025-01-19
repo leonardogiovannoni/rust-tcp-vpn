@@ -3,7 +3,7 @@ use std::fs::File;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::os::fd::{AsFd, AsRawFd};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use socket2::SockAddr;
 
 #[inline(always)]

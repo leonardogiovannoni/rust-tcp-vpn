@@ -7,7 +7,7 @@ use rust_tcp_vpn::parsing;
 use rust_tcp_vpn::run;
 
 fn main() -> Result<()> {
-    let args = parsing::parse_arg();
+    let args = parsing::parse_arg()?;
     run(args)?;
     Ok(())
 }

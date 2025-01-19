@@ -1,10 +1,10 @@
 use crate::flows;
 use crate::handshake;
-use crate::tunif;
-use anyhow::bail;
+use crate::tunif::Iface;
 use anyhow::Result;
+use anyhow::bail;
 use std::net::{IpAddr, TcpListener};
-use tunif::Iface;
+
 pub fn execute_server(
     ifname: String,
     ifaddr: IpAddr,

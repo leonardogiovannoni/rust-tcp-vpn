@@ -2,7 +2,7 @@ use crate::flows;
 use crate::handshake;
 
 use crate::tunif::Iface;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::net::{IpAddr, TcpStream};
 
 pub fn execute_client(

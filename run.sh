@@ -40,9 +40,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Uncomment the following line if you want a release build:
-# cargo build --release
-
 ###############################################################################
 # 3. Configure environment and capabilities
 ###############################################################################

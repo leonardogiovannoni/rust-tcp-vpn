@@ -2,12 +2,12 @@
 
 use ctrlc;
 // https://docs.rs/nix/latest/nix/sys/signal/struct.SigSet.html
+use anyhow::{Result, bail};
 use nix::sys::signal::{SigSet, SigmaskHow, Signal};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use anyhow::{bail, Result};
 const THREAD_NAME: &str = "sigthread";
 
 // Signal thread created?
@@ -34,7 +34,10 @@ pub fn spawn_sig_handler() -> Result<File> {
                 "signals::spawn_sig_handler"
             );
         }
-        if STARTED.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+        if STARTED
+            .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
             break;
         }
     }
@@ -83,7 +86,7 @@ pub fn spawn_sig_handler() -> Result<File> {
 
 // consume data waiting inside the
 pub fn consume_sigpipe(sigfile: &mut std::fs::File) {
-    let mut buf: [u8; 8] = [0; 8];
+    let mut buf = [0; 8];
     // if fail to read from pipe bad error occurs!
-    let _ = sigfile.read(&mut buf[..]).unwrap();
+    let _ = sigfile.read(&mut buf).unwrap();
 }

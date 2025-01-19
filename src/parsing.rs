@@ -2,8 +2,8 @@
 // https://docs.rs/clap/latest/clap/
 use clap::Parser;
 
+use anyhow::Result;
 use std::net::{IpAddr, SocketAddr};
-use std::process;
 use std::str::FromStr;
 
 const DEFAULT_IFNAME: &str = "tun0";
@@ -64,30 +64,31 @@ struct Opts {
     server: bool,
 }
 
-pub fn parse_arg() -> Args {
+pub fn parse_arg() -> Result<Args> {
     let args = Opts::parse();
 
+    let Opts {
+        host,
+        port,
+        ifname,
+        ifaddr,
+        netmask,
+        server,
+    } = args;
     // https://doc.rust-lang.org/std/str/trait.FromStr.html#tymethod.from_str
-    let host = match IpAddr::from_str(&args.host) {
-        Ok(addr) => addr,
-        Err(err) => {
-            eprintln!("Error parsing address: {}", err);
-            process::exit(1)
-        }
-    };
-    let ifaddr = args.ifaddr;
+    let host = IpAddr::from_str(&host)?;
     // IP address to be used in network connection
-    let addr = SocketAddr::new(host, args.port);
-    Args {
+    let addr = SocketAddr::new(host, port);
+    Ok(Args {
         interface: Interface {
-            ifname: args.ifname,
+            ifname,
             ifaddr,
-            netmask: args.netmask,
+            netmask,
         },
-        mode: if args.server {
+        mode: if server {
             Mode::Server { local: addr }
         } else {
             Mode::Client { remote: addr }
         },
-    }
+    })
 }
